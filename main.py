@@ -51,7 +51,7 @@ def _parse_seed(seed_raw: str | None) -> int:
     try:
         return int(seed_str)
     except ValueError as exc:
-        raise ValueError("迷路シードには整数を入力してください。") from exc
+        raise ValueError("Maze seed must be an integer.") from exc
 
 
 def _parse_color(
@@ -63,14 +63,14 @@ def _parse_color(
     if text.startswith("#"):
         text = text[1:]
     if len(text) != 6:
-        raise ValueError(f"{label}は #RRGGBB 形式で指定してください。")
+        raise ValueError(f"{label} must be a #RRGGBB value.")
     try:
         r = int(text[0:2], 16)
         g = int(text[2:4], 16)
         b = int(text[4:6], 16)
         return (r, g, b)
     except ValueError as exc:  # pragma: no cover - defensive
-        raise ValueError(f"{label}は #RRGGBB 形式で指定してください。") from exc
+        raise ValueError(f"{label} must be a #RRGGBB value.") from exc
 
 
 def _rgb_to_hex(rgb: Iterable[int]) -> str:
@@ -96,10 +96,10 @@ def _build_options(form: dict) -> RenderOptions:
         maximum=MAX_MASK_HEIGHT,
     )
     wall_color = _parse_color(
-        form.get("wall_color"), DEFAULT_WALL_COLOR, label="壁の色"
+        form.get("wall_color"), DEFAULT_WALL_COLOR, label="Wall color"
     )
     floor_color = _parse_color(
-        form.get("floor_color"), DEFAULT_FLOOR_COLOR, label="床の色"
+        form.get("floor_color"), DEFAULT_FLOOR_COLOR, label="Floor color"
     )
     return RenderOptions(
         message=message,

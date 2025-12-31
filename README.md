@@ -1,30 +1,25 @@
 ## Dungeon Drawer (Flask)
 
-Flask ベースの GUI で、迷路（Wilson 法で生成）に英数字メッセージを**マスク上の 16 進ビットマスク列**として潜ませられます。  
-`dungeon_drawer.py` ではテーブルに沿って 0-9 / A-Z をマスク 2 行に書き込み、そこから迷路画像を生成しています。
+Render Wilson mazes that hide a short message as a hex bitmask, then export a chunky PNG preview.
 
-### セットアップ
+### Setup
 
 ```bash
 uv sync
 ```
 
-### 起動
+### Run (development)
 
 ```bash
 uv run flask --app main run --debug
 ```
 
-<http://127.0.0.1:5000/> を開くとフォームが表示されます。
+Visit http://127.0.0.1:5000/ and fill the form:
 
-- 利用可能文字: 0-9, A-Z（小文字も入力可だが内部で大文字化）と空白（半角 / 全角）。  
-  空白は 2 列分の余白ギャップとして描画され、top row が欠けている o / r / V は自動で `.` で埋めます。
-- 1 文字あたり 1 または 2 列を消費し、文字間には 1 列の空き列を自動挿入します。  
-  埋め込みは上から 4 行目・左から 4 列目を起点に右方向へ広がり、横方向の余裕はおよそ 14 列（6〜7 文字）です。
-- 改行すると上下 2 行のペアを 3 行空けて次の段が描画されます。
-- 入力中のメッセージがマスクにどう入ったかをフォーム下部のプレビューで確認できます。
-- 出力画像は「ピクセル倍率（1〜40）」で縦横ピクセル数を増減でき、PNG 保存時には `DPI` メタデータ（デフォルト 500）が埋め込まれます。
-- 「マスクの幅 / 高さ」で迷路の列数・行数を調整できます（最低 5×6 〜 最大 80×80）。幅を広げるとメッセージを置ける列数も増えます。
-- 壁と床のカラーは HEX（`#RRGGBB`）を指定できるので、出力スタイルを手軽に変えられます。
+- Message accepts A-Z, 0-9, and spaces. Spaces insert a 2-column gap.
+- Mask width/height controls the grid size (min 5×6, max 80×80).
+- Pixel scale multiplies the rendered PNG size (1-40); DPI metadata defaults to 500.
+- Wall/Floor colors accept `#RRGGBB`.
+- Preview shows the encoded mask rows and basic width/height/floor coverage stats.
 
-生成した PNG はプレビューの上から直接保存（右クリック等）してください。
+Save the PNG directly from the preview image.
