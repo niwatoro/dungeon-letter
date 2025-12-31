@@ -35,7 +35,9 @@ DEFAULT_MASK = [
 DEFAULT_MASK_HEIGHT = len(DEFAULT_MASK)
 DEFAULT_MASK_WIDTH = len(DEFAULT_MASK[0])
 
-MESSAGE_MAX_COLUMNS = (len(DEFAULT_MASK[0]) - 2) - MESSAGE_START_COL  # usable columns to the right
+MESSAGE_MAX_COLUMNS = (
+    len(DEFAULT_MASK[0]) - 2
+) - MESSAGE_START_COL  # usable columns to the right
 
 MIN_MASK_HEIGHT = max(MESSAGE_START_ROW + 3, 6)
 MIN_MASK_WIDTH = max(MESSAGE_START_COL + 2, 5)
@@ -305,9 +307,7 @@ def _lookup_tokens(ch: str) -> tuple[str, str]:
     key = ch.upper() if ch.isalpha() else ch
     tokens = CHAR_CODES.get(key)
     if tokens is None:
-        raise ValueError(
-            f"Unsupported character '{ch}'. Use digits, A-Z, or spaces."
-        )
+        raise ValueError(f"Unsupported character '{ch}'. Use digits, A-Z, or spaces.")
     return tokens
 
 
@@ -317,13 +317,14 @@ def _write_line_to_rows(
     row_bottom: int,
     line: str,
     glyph_spans: list[tuple[str, int, int, int, int]],
+    start_col: int,
 ) -> None:
     cleaned = list(line)
     if not cleaned:
         return
 
     width = len(rows[0])
-    col = MESSAGE_START_COL
+    col = start_col
     prev_width = 0
 
     for idx, ch in enumerate(cleaned):
@@ -357,7 +358,12 @@ def _write_line_to_rows(
 
 
 def _apply_message_to_mask(
-    mask: Sequence[str], message: str
+    mask: Sequence[str],
+    message: str,
+    *,
+    start_row: int = MESSAGE_START_ROW,
+    start_col: int = MESSAGE_START_COL,
+    line_gap: int = MESSAGE_LINE_GAP,
 ) -> tuple[list[str], list[tuple[int, int]], list[tuple[str, int, int, int, int]]]:
     rows = [list(row) for row in mask]
     lines = _split_message_lines(message)
@@ -365,27 +371,32 @@ def _apply_message_to_mask(
     glyph_spans: list[tuple[str, int, int, int, int]] = []
 
     for line_idx, line in enumerate(lines):
-        row_top = MESSAGE_START_ROW + line_idx * (2 + MESSAGE_LINE_GAP)
+        row_top = start_row + line_idx * (2 + line_gap)
         row_bottom = row_top + 1
         if row_bottom >= len(rows) - 1:
             raise ValueError("Message is too tall for the current mask.")
-        _write_line_to_rows(rows, row_top, row_bottom, line, glyph_spans)
+        _write_line_to_rows(
+            rows, row_top, row_bottom, line, glyph_spans, start_col
+        )
         used_rows.append((row_top, row_bottom))
 
     return ["".join(row) for row in rows], used_rows, glyph_spans
 
 
 DEFAULT_WALL_COLOR = (12, 15, 18)
-DEFAULT_MESSAGE_WALL_COLOR = (200, 30, 30)
+DEFAULT_MESSAGE_WALL_COLOR = (225, 36, 36)
 DEFAULT_FLOOR_COLOR = (235, 232, 224)
 
 
 @dataclass
 class RenderOptions:
     message: str = "DUNGEON"
+    message_start_row: int = MESSAGE_START_ROW
+    message_start_col: int = MESSAGE_START_COL
     seed: int = 0
     mask_width: int = DEFAULT_MASK_WIDTH
     mask_height: int = DEFAULT_MASK_HEIGHT
+    mask_override: list[str] | None = None
     wall_color: tuple[int, int, int] = DEFAULT_WALL_COLOR
     message_wall_color: tuple[int, int, int] = DEFAULT_MESSAGE_WALL_COLOR
     floor_color: tuple[int, int, int] = DEFAULT_FLOOR_COLOR
@@ -468,12 +479,23 @@ def _build_letter_wall_mask(
 def render_message_maze(
     options: RenderOptions,
 ) -> tuple[
-    Image.Image, np.ndarray, list[str], list[tuple[int, int]], list[tuple[str, int, int, int, int]]
+    Image.Image,
+    np.ndarray,
+    list[str],
+    list[tuple[int, int]],
+    list[tuple[str, int, int, int, int]],
 ]:
     """Generate a dungeon image whose topology hides the provided message."""
-    base_mask = build_rectangular_mask(options.mask_width, options.mask_height)
+    base_mask = (
+        options.mask_override
+        if options.mask_override is not None
+        else build_rectangular_mask(options.mask_width, options.mask_height)
+    )
     mask_with_message, used_rows, glyph_spans = _apply_message_to_mask(
-        base_mask, options.message
+        base_mask,
+        options.message,
+        start_row=options.message_start_row,
+        start_col=options.message_start_col,
     )
     raw = generate_mask_image(
         mask=mask_with_message, seed=options.seed, scale=options.scale

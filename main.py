@@ -11,13 +11,16 @@ from flask import Flask, render_template, request
 
 from dungeon_drawer import (
     DEFAULT_FLOOR_COLOR,
+    DEFAULT_MASK,
     DEFAULT_MASK_HEIGHT,
     DEFAULT_MASK_WIDTH,
     DEFAULT_MESSAGE_WALL_COLOR,
     DEFAULT_WALL_COLOR,
     MAX_MASK_HEIGHT,
     MAX_MASK_WIDTH,
+    MESSAGE_MIN_COL,
     MESSAGE_START_COL,
+    MESSAGE_START_ROW,
     MIN_MASK_HEIGHT,
     MIN_MASK_WIDTH,
     RenderOptions,
@@ -79,9 +82,36 @@ def _rgb_to_hex(rgb: Iterable[int]) -> str:
     return f"#{r:02x}{g:02x}{b:02x}"
 
 
+def _parse_mask_override(value: str | None) -> list[str] | None:
+    if value is None or not value.strip():
+        return None
+    lines = value.splitlines()
+    if not any(line.strip() for line in lines):
+        return None
+    width = max(len(line) for line in lines)
+    height = len(lines)
+    if width < MIN_MASK_WIDTH or width > MAX_MASK_WIDTH:
+        raise ValueError(
+            f"Mask width must be between {MIN_MASK_WIDTH} and {MAX_MASK_WIDTH} columns."
+        )
+    if height < MIN_MASK_HEIGHT or height > MAX_MASK_HEIGHT:
+        raise ValueError(
+            f"Mask height must be between {MIN_MASK_HEIGHT} and {MAX_MASK_HEIGHT} rows."
+        )
+    allowed_chars = {"#", ".", " "}
+    allowed_chars.update("0123456789abcdefABCDEF")
+    for line_idx, line in enumerate(lines, start=1):
+        for col_idx, ch in enumerate(line, start=1):
+            if ch not in allowed_chars:
+                raise ValueError(
+                    f"Mask contains an unsupported character '{ch}' at row {line_idx}, column {col_idx}."
+                )
+    return lines
+
+
 def _build_options(form: dict) -> RenderOptions:
     message_value = form.get("message")
-    message = DEFAULT_MESSAGE if message_value is None or message_value == "" else message_value
+    message = DEFAULT_MESSAGE if message_value is None else message_value
     seed = _parse_seed(form.get("seed"))
     scale = _clamp_int(form.get("scale"), 12, minimum=1, maximum=40)
     dpi = _clamp_int(form.get("dpi"), 500, minimum=72, maximum=1200)
@@ -108,16 +138,36 @@ def _build_options(form: dict) -> RenderOptions:
     floor_color = _parse_color(
         form.get("floor_color"), DEFAULT_FLOOR_COLOR, label="Floor color"
     )
+    mask_override = _parse_mask_override(form.get("mask"))
+    effective_mask_height = len(mask_override) if mask_override else mask_height
+    effective_mask_width = (
+        max(len(line) for line in mask_override) if mask_override else mask_width
+    )
+    message_start_row = _clamp_int(
+        form.get("message_start_row"),
+        MESSAGE_START_ROW,
+        minimum=0,
+        maximum=max(0, effective_mask_height - 3),
+    )
+    message_start_col = _clamp_int(
+        form.get("message_start_col"),
+        MESSAGE_START_COL,
+        minimum=MESSAGE_MIN_COL,
+        maximum=max(MESSAGE_MIN_COL, effective_mask_width - 3),
+    )
     return RenderOptions(
         message=message,
         seed=seed,
         mask_width=mask_width,
         mask_height=mask_height,
+        mask_override=mask_override,
         wall_color=wall_color,
         message_wall_color=message_wall_color,
         floor_color=floor_color,
         scale=scale,
         dpi=dpi,
+        message_start_row=message_start_row,
+        message_start_col=message_start_col,
     )
 
 
@@ -137,6 +187,11 @@ def index():
     stats = None
     mask_lines = None
     options = RenderOptions(message=DEFAULT_MESSAGE)
+    mask_input_value = request.form.get("mask")
+    if mask_input_value is None:
+        mask_input_value = "\n".join(DEFAULT_MASK)
+    mask_actual_width = options.mask_width
+    mask_actual_height = options.mask_height
 
     if request.method == "POST":
         try:
@@ -149,10 +204,14 @@ def index():
                 for pair in used_rows
                 for row_idx in pair
             ]
+            mask_actual_width = len(mask[0]) if mask else options.mask_width
+            mask_actual_height = len(mask)
         except Exception as exc:  # pylint: disable=broad-except
             error = str(exc)
 
-    message_width = max(0, options.mask_width - 2 - MESSAGE_START_COL)
+    message_width = max(0, mask_actual_width - 2 - options.message_start_col)
+    message_row_max = max(0, mask_actual_height - 3)
+    message_col_max = max(MESSAGE_MIN_COL, mask_actual_width - 3)
     return render_template(
         "index.html",
         image_data=image_data,
@@ -165,9 +224,15 @@ def index():
         mask_max_width=MAX_MASK_WIDTH,
         mask_min_height=MIN_MASK_HEIGHT,
         mask_max_height=MAX_MASK_HEIGHT,
+        mask_text=mask_input_value,
+        mask_actual_width=mask_actual_width,
+        mask_actual_height=mask_actual_height,
         wall_color_hex=_rgb_to_hex(options.wall_color),
         message_wall_color_hex=_rgb_to_hex(options.message_wall_color),
         floor_color_hex=_rgb_to_hex(options.floor_color),
+        message_row_max=message_row_max,
+        message_col_min=MESSAGE_MIN_COL,
+        message_col_max=message_col_max,
     )
 
 

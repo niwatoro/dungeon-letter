@@ -8,8 +8,8 @@
   --hud-amber: #f6d68c;
   --hud-cyan: #9fdff5;
   --hud-green: #b4edcb;
-  --button-red: #c65352;
-  --button-red-dark: #7d2323;
+  --button-red: #e03b3b;
+  --button-red-dark: #a82020;
   --text-bright: #f7f3df;
   --text-dim: rgba(247, 243, 223, 0.62);
   --panel-border: #1b2352;
@@ -201,7 +201,7 @@ textarea {
   padding: 0.85rem 1.2rem;
   border: 3px solid #190907;
   color: #f6eadc;
-  background: linear-gradient(180deg, var(--button-red), #7a1a1a);
+  background: linear-gradient(180deg, var(--button-red), #e12424);
   border-radius: 0;
   cursor: pointer;
   display: inline-flex;

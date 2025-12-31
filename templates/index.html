@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Hidden Message Dungeon</title>
+    <title>Dungeon With Message</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -25,7 +25,17 @@
               <textarea name="message" rows="3" placeholder="A-Z 0-9 space">{{ options.message }}</textarea>
             </label>
             <p class="hint">
-              Allowed: A-Z, 0-9, spaces. ~{{ message_width }} columns remain after the start offset.
+              Allowed: A-Z, 0-9, spaces.
+            </p>
+            <label>
+              Mask layout
+              <textarea
+                name="mask"
+                rows="14"
+                placeholder="# is wall, '.' is open, digits 0-F restrict directions">{{ mask_text }}</textarea>
+            </label>
+            <p class="hint">
+              Use '#' for wall, '.' for open space, and hex digits (8: up, 4: right, 2: down, 1: left) for open directions.
             </p>
             <div class="input-row">
               <label>
@@ -51,6 +61,30 @@
                 Height
                 <input type="number" name="mask_height" min="{{ mask_min_height }}" max="{{ mask_max_height }}" value="{{ options.mask_height }}">
                 <span class="hint-inline">{{ mask_min_height }}-{{ mask_max_height }}</span>
+              </label>
+            </div>
+            <div class="input-row">
+              <label>
+                Msg row
+                <input
+                  type="number"
+                  name="message_start_row"
+                  min="0"
+                  max="{{ message_row_max }}"
+                  value="{{ options.message_start_row }}"
+                >
+                <span class="hint-inline">0-indexed top-left row</span>
+              </label>
+              <label>
+                Msg col
+                <input
+                  type="number"
+                  name="message_start_col"
+                  min="{{ message_col_min }}"
+                  max="{{ message_col_max }}"
+                  value="{{ options.message_start_col }}"
+                >
+                <span class="hint-inline">0-indexed column (min {{ message_col_min }})</span>
               </label>
             </div>
             <div class="color-row">
