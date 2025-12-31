@@ -386,6 +386,11 @@ textarea {
   gap: 0.45rem;
 }
 
+.footnote a {
+  color: var(--text-light);
+  text-decoration: underline;
+}
+
 .ticker {
   display: flex;
   flex-wrap: wrap;
