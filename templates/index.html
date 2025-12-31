@@ -67,10 +67,19 @@
                 <input type="color" name="floor_color" value="{{ floor_color_hex }}">
               </label>
             </div>
-            <button type="submit" class="pixel-button">
-              <span>Render</span>
-              <span class="button-glyph" aria-hidden="true">▶︎</span>
-            </button>
+            <div class="form-actions">
+              <button type="submit" class="pixel-button">
+                <span>Render</span>
+                <span class="button-glyph" aria-hidden="true">▶︎</span>
+              </button>
+              <button
+                type="button"
+                class="pixel-button reset-button"
+                onclick="window.location.href='{{ url_for('index') }}';"
+              >
+                RESET
+              </button>
+            </div>
           </form>
           {% if error %}
             <p class="error">{{ error }}</p>

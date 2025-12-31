@@ -26,7 +26,7 @@ from dungeon_drawer import (
 
 app = Flask(__name__)
 
-DEFAULT_MESSAGE = "DUNGEON"
+DEFAULT_MESSAGE = "HAPPY\n NEW\n YEAR"
 
 
 def _encode_png(img, dpi: int) -> str:
@@ -80,7 +80,8 @@ def _rgb_to_hex(rgb: Iterable[int]) -> str:
 
 
 def _build_options(form: dict) -> RenderOptions:
-    message = form.get("message", DEFAULT_MESSAGE).strip() or DEFAULT_MESSAGE
+    message_value = form.get("message")
+    message = DEFAULT_MESSAGE if message_value is None or message_value == "" else message_value
     seed = _parse_seed(form.get("seed"))
     scale = _clamp_int(form.get("scale"), 12, minimum=1, maximum=40)
     dpi = _clamp_int(form.get("dpi"), 500, minimum=72, maximum=1200)
