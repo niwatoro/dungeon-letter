@@ -13,7 +13,7 @@
     <div class="bg-layer bg-grid" aria-hidden="true"></div>
     <div class="bg-layer bg-glow" aria-hidden="true"></div>
     <div class="bg-layer bg-noise" aria-hidden="true"></div>
-    <div class="app-shell">
+    <div class="app-shell console-shell">
       <main class="dashboard">
         <section class="panel form-panel">
           <div class="panel-header">
@@ -36,7 +36,7 @@
                 <input type="number" name="seed" placeholder="random" value="{{ options.seed }}" />
               </label>
               <label>
-                Scale 1-40
+                Scale
                 <input type="number" name="scale" min="1" max="40" value="{{ options.scale }}" />
               </label>
               <label>
@@ -85,7 +85,6 @@
             <div class="form-actions">
               <button type="submit" class="pixel-button">
                 <span>Render</span>
-                <span class="button-glyph" aria-hidden="true">▶︎</span>
               </button>
               <button type="button" class="pixel-button reset-button" onclick="window.location.href='{{ url_for('index') }}';">RESET</button>
             </div>
@@ -131,10 +130,6 @@
           {% endif %}
         </section>
       </main>
-
-      <footer class="footnote">
-        <p>Pixel scale 1-40 · DPI 72-1200 · Mask {{ mask_min_width }}-{{ mask_max_width }} × {{ mask_min_height }}-{{ mask_max_height }}</p>
-      </footer>
     </div>
   </body>
 </html>
