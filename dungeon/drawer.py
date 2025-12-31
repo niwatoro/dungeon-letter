@@ -1,11 +1,10 @@
 import base64
-import io
 import random
+import struct
+import zlib
 from collections import deque
 from dataclasses import asdict, dataclass
 from typing import Sequence, TypeVar
-
-from PIL import Image
 
 U, D, L, R = 8, 4, 2, 1  # up, down, left, right
 
@@ -415,23 +414,21 @@ class RenderOptions:
         return {k: str(v) for k, v in asdict(self).items()}
 
 
-def _build_base_image(
+def _build_pixel_grid(
     grid: Sequence[Sequence[int]],
     wall_color: tuple[int, int, int],
     floor_color: tuple[int, int, int],
     *,
     highlight_mask: Sequence[Sequence[bool]] | None = None,
     highlight_color: tuple[int, int, int] | None = None,
-) -> Image.Image:
-    """Expand the maze grid into an RGB ``Image``."""
+) -> list[list[tuple[int, int, int]]]:
+    """Convert the maze grid into an RGB pixel matrix."""
     height = len(grid)
     width = len(grid[0]) if height else 0
-    image = Image.new("RGB", (width, height))
-    pixels = image.load()
-
-    for y, row in enumerate(grid):
-        for x, value in enumerate(row):
-            pixels[x, y] = wall_color if value == 1 else floor_color
+    pixels: list[list[tuple[int, int, int]]] = [
+        [wall_color if value == 1 else floor_color for value in row]
+        for row in grid
+    ]
 
     if highlight_mask is not None and highlight_color is not None:
         for y, row in enumerate(highlight_mask):
@@ -441,9 +438,9 @@ def _build_base_image(
                 if x >= width:
                     break
                 if mark:
-                    pixels[x, y] = highlight_color
+                    pixels[y][x] = highlight_color
 
-    return image
+    return pixels
 
 
 def _build_letter_wall_mask(
@@ -513,7 +510,7 @@ def _build_letter_wall_mask(
 def render_message_maze(
     options: RenderOptions,
 ) -> tuple[
-    Image.Image,
+    list[list[tuple[int, int, int]]],
     list[list[int]],
     list[str],
     list[tuple[int, int]],
@@ -537,7 +534,7 @@ def render_message_maze(
     highlight_mask = _build_letter_wall_mask(mask_with_message, used_rows, glyph_spans)
     if highlight_mask is not None and options.scale > 1:
         highlight_mask = _scale_grid(highlight_mask, options.scale)
-    base_img = _build_base_image(
+    base_img = _build_pixel_grid(
         raw,
         options.wall_color,
         options.floor_color,
@@ -549,17 +546,58 @@ def render_message_maze(
 
 def render_to_base64(options: RenderOptions) -> str:
     """Return the hidden-message dungeon PNG encoded as a data URI fragment."""
-    img, _, _, _, _ = render_message_maze(options)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG", dpi=(options.dpi, options.dpi))
-    data = base64.b64encode(buf.getvalue()).decode("ascii")
-    return f"data:image/png;base64,{data}"
+    pixels, _, _, _, _ = render_message_maze(options)
+    return f"data:image/png;base64,{encode_png(pixels, options.dpi)}"
+
+
+def _png_chunk(chunk_type: bytes, data: bytes) -> bytes:
+    length = struct.pack(">I", len(data))
+    chunk = chunk_type + data
+    crc = struct.pack(">I", zlib.crc32(chunk) & 0xFFFFFFFF)
+    return length + chunk + crc
+
+
+def encode_png(
+    pixels: Sequence[Sequence[tuple[int, int, int]]], dpi: int = 72
+) -> str:
+    """Encode an RGB pixel grid into a base64 PNG representation."""
+    height = len(pixels)
+    if height == 0:
+        raise ValueError("Image height must be greater than zero.")
+    width = len(pixels[0])
+    if width == 0:
+        raise ValueError("Image width must be greater than zero.")
+
+    data = bytearray()
+    for row in pixels:
+        if len(row) != width:
+            raise ValueError("All rows must have the same width.")
+        data.append(0)  # filter type 0 (None)
+        for r, g, b in row:
+            data.extend((r, g, b))
+
+    compressor = zlib.compressobj()
+    compressed = compressor.compress(bytes(data)) + compressor.flush()
+
+    header = bytearray(b"\x89PNG\r\n\x1a\n")
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    header.extend(_png_chunk(b"IHDR", ihdr))
+
+    if dpi > 0:
+        ppm = int(round(dpi * 39.37007874015748))
+        phys = struct.pack(">IIB", ppm, ppm, 1)
+        header.extend(_png_chunk(b"pHYs", phys))
+
+    header.extend(_png_chunk(b"IDAT", compressed))
+    header.extend(_png_chunk(b"IEND", b""))
+
+    return base64.b64encode(bytes(header)).decode("ascii")
 
 
 def _demo(seed: int = 0):
     opts = RenderOptions(seed=seed)
-    img, _, _, _ = render_message_maze(opts)
-    img.show()
+    pixels, _, _, _, _ = render_message_maze(opts)
+    print(encode_png(pixels, opts.dpi))
 
 
 __all__ = [
@@ -573,6 +611,7 @@ __all__ = [
     "generate_mask_image",
     "maze_forest_from_mask",
     "render_message_maze",
+    "encode_png",
     "render_to_base64",
 ]
 

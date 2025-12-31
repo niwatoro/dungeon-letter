@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import base64
-import io
 import random
 from typing import Iterable, Sequence
 
@@ -22,17 +20,13 @@ from dungeon import (
     MIN_MASK_HEIGHT,
     MIN_MASK_WIDTH,
     RenderOptions,
+    encode_png,
     render_message_maze,
 )
 
 app = Flask(__name__, template_folder="../templates", static_folder="../static")
 
 DEFAULT_MESSAGE = "HAPPY\n NEW\n YEAR"
-
-def _encode_png(img, dpi: int) -> str:
-    buf = io.BytesIO()
-    img.save(buf, format="PNG", dpi=(dpi, dpi))
-    return base64.b64encode(buf.getvalue()).decode("ascii")
 
 
 def _clamp_int(value: str | None, default: int, *, minimum: int, maximum: int) -> int:
@@ -197,8 +191,8 @@ async def index() -> str:
     if request.method == "POST":
         try:
             options = _build_options(request.form)
-            img, raw, mask, used_rows, _ = render_message_maze(options)
-            image_data = f"data:image/png;base64,{_encode_png(img, options.dpi)}"
+            image_pixels, raw, mask, used_rows, _ = render_message_maze(options)
+            image_data = f"data:image/png;base64,{encode_png(image_pixels, options.dpi)}"
             stats = _stats(raw)
             mask_lines = [
                 {"index": row_idx, "text": mask[row_idx]}

@@ -13,11 +13,13 @@ from .drawer import (
     MIN_MASK_HEIGHT,
     MIN_MASK_WIDTH,
     RenderOptions,
+    encode_png,
     render_message_maze,
 )
 
 __all__ = [
     "RenderOptions",
+    "encode_png",
     "render_message_maze",
     "DEFAULT_WALL_COLOR",
     "DEFAULT_MESSAGE_WALL_COLOR",
