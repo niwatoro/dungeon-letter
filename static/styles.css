@@ -226,25 +226,28 @@ textarea {
   transition: background 0.2s ease, transform 0.15s ease;
 }
 
-.pixel-button:hover {
+.pixel-button:hover,
+.toggle-button:hover {
   background: #000;
   color: var(--text-light);
 }
 
-.pixel-button:active {
+.pixel-button:active,
+.toggle-button:active {
   transform: translateY(2px);
 }
 
-.pixel-button:focus-visible {
+.pixel-button:focus-visible,
+.toggle-button:focus-visible {
   outline: 3px dashed var(--text-light);
   outline-offset: 4px;
 }
 
 .toggle-button {
   font-family: inherit;
-  background: #000;
+  background: #fff;
   border: 2px solid var(--text-light);
-  color: var(--text-light);
+  color: var(--button-color);
 }
 
 .form-actions {
