@@ -26,7 +26,7 @@ from dungeon import (
 
 app = Flask(__name__, template_folder="../templates", static_folder="../static")
 
-DEFAULT_MESSAGE = "HAPPY\n NEW\n YEAR"
+DEFAULT_MESSAGE = "HAPPY\n  NEW\n YEAR"
 
 
 def _clamp_int(value: str | None, default: int, *, minimum: int, maximum: int) -> int:
