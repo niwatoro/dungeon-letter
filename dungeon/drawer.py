@@ -2,7 +2,7 @@ import base64
 import io
 import random
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Sequence, TypeVar
 
 from PIL import Image
@@ -410,6 +410,9 @@ class RenderOptions:
     floor_color: tuple[int, int, int] = DEFAULT_FLOOR_COLOR
     scale: int = 12
     dpi: int = 500
+
+    def to_dict(self):
+        return {k: str(v) for k, v in asdict(self).items()}
 
 
 def _build_base_image(

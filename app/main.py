@@ -2,13 +2,10 @@ from __future__ import annotations
 
 import base64
 import io
-import os
 import random
 from typing import Iterable, Sequence
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from starlette.templating import Jinja2Templates
+
+from flask import Flask, render_template, request
 
 from dungeon import (
     DEFAULT_FLOOR_COLOR,
@@ -28,12 +25,9 @@ from dungeon import (
     render_message_maze,
 )
 
-app = FastAPI()
-templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app = Flask(__name__, template_folder="../templates", static_folder="../static")
 
 DEFAULT_MESSAGE = "HAPPY\n NEW\n YEAR"
-
 
 def _encode_png(img, dpi: int) -> str:
     buf = io.BytesIO()
@@ -189,8 +183,8 @@ def _stats(raw: Sequence[Sequence[int]]):
     }
 
 
-@app.api_route("/", methods=["GET", "POST"], response_class=HTMLResponse)
-async def index(request: Request):
+@app.route("/", methods=["GET", "POST"])
+async def index() -> str:
     error = None
     image_data = None
     stats = None
@@ -201,12 +195,9 @@ async def index(request: Request):
     mask_actual_height = options.mask_height
 
     if request.method == "POST":
-        raw_form = await request.form()
-        form_data = {key: value for key, value in raw_form.items()}
-        mask_input_value = raw_form.get("mask") or mask_input_value
         try:
-            options = _build_options(form_data)
-            img, raw, mask, used_rows, _glyph_spans = render_message_maze(options)
+            options = _build_options(request.form)
+            img, raw, mask, used_rows, _ = render_message_maze(options)
             image_data = f"data:image/png;base64,{_encode_png(img, options.dpi)}"
             stats = _stats(raw)
             mask_lines = [
@@ -222,35 +213,29 @@ async def index(request: Request):
     message_width = max(0, mask_actual_width - 2 - options.message_start_col)
     message_row_max = max(0, mask_actual_height - 3)
     message_col_max = max(MESSAGE_MIN_COL, mask_actual_width - 3)
-    return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-            "image_data": image_data,
-            "stats": stats,
-            "error": error,
-            "options": options,
-            "message_width": message_width,
-            "mask_preview": mask_lines,
-            "mask_min_width": MIN_MASK_WIDTH,
-            "mask_max_width": MAX_MASK_WIDTH,
-            "mask_min_height": MIN_MASK_HEIGHT,
-            "mask_max_height": MAX_MASK_HEIGHT,
-            "mask_text": mask_input_value,
-            "mask_actual_width": mask_actual_width,
-            "mask_actual_height": mask_actual_height,
-            "wall_color_hex": _rgb_to_hex(options.wall_color),
-            "message_wall_color_hex": _rgb_to_hex(options.message_wall_color),
-            "floor_color_hex": _rgb_to_hex(options.floor_color),
-            "message_row_max": message_row_max,
-            "message_col_min": MESSAGE_MIN_COL,
-            "message_col_max": message_col_max,
-        },
-    )
+    context = {
+        "image_data": image_data,
+        "stats": stats,
+        "error": error,
+        "options": options.to_dict(),
+        "message_width": message_width,
+        "mask_preview": mask_lines,
+        "mask_min_width": MIN_MASK_WIDTH,
+        "mask_max_width": MAX_MASK_WIDTH,
+        "mask_min_height": MIN_MASK_HEIGHT,
+        "mask_max_height": MAX_MASK_HEIGHT,
+        "mask_text": mask_input_value,
+        "mask_actual_width": mask_actual_width,
+        "mask_actual_height": mask_actual_height,
+        "wall_color_hex": _rgb_to_hex(options.wall_color),
+        "message_wall_color_hex": _rgb_to_hex(options.message_wall_color),
+        "floor_color_hex": _rgb_to_hex(options.floor_color),
+        "message_row_max": message_row_max,
+        "message_col_min": MESSAGE_MIN_COL,
+        "message_col_max": message_col_max,
+    }
+    return render_template("index.html", **context)
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "8000"))
-    import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
+    app.run(port=8000)
