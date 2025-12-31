@@ -103,7 +103,7 @@ for key, value in _LETTER_CODES_BASE.items():
     LETTER_CODES[key.lower()] = value
 
 CHAR_CODES = {**DIGIT_CODES, **LETTER_CODES}
-CHAR_CODES[" "] = (".", ".")
+CHAR_CODES[" "] = ("", "")
 
 
 def build_rectangular_mask(width: int, height: int) -> list[str]:
