@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
 
-from dungeon_drawer import (
+from dungeon import (
     DEFAULT_FLOOR_COLOR,
     DEFAULT_MASK,
     DEFAULT_MASK_HEIGHT,
@@ -246,7 +246,7 @@ async def index(request: Request):
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "5000"))
+    port = int(os.environ.get("PORT", "8000"))
     import uvicorn
 
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")

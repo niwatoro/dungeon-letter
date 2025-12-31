@@ -11,10 +11,10 @@ uv sync
 ### Run (development)
 
 ```bash
-uv run uvicorn main:app --reload --host 0.0.0.0 --port 5000
+uv run uvicorn main:app --reload
 ```
 
-Visit http://127.0.0.1:5000/ and fill the form:
+Visit <http://127.0.0.1:8000/> and fill the form:
 
 - Message accepts A-Z, 0-9, and spaces. Spaces insert a 2-column gap; leave the textarea blank to render a maze without a hidden message.
 - Message row/column let you choose the 0-indexed mask coordinates for the text's top-left pixel.
