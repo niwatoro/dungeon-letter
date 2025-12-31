@@ -4,9 +4,7 @@ import base64
 import io
 import os
 import random
-from typing import Iterable
-
-import numpy as np
+from typing import Iterable, Sequence
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -176,11 +174,17 @@ def _build_options(form: dict) -> RenderOptions:
     )
 
 
-def _stats(raw: np.ndarray):
-    floor_ratio = np.mean(raw == 0)
+def _stats(raw: Sequence[Sequence[int]]):
+    height = len(raw)
+    if height == 0 or not raw[0]:
+        return {"width": 0, "height": 0, "floor_pct": 0.0}
+    width = len(raw[0])
+    total = width * height
+    floor_count = sum(1 for row in raw for value in row if value == 0)
+    floor_ratio = floor_count / total if total else 0
     return {
-        "width": int(raw.shape[1]),
-        "height": int(raw.shape[0]),
+        "width": width,
+        "height": height,
         "floor_pct": round(floor_ratio * 100, 2),
     }
 

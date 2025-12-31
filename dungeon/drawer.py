@@ -3,9 +3,8 @@ import io
 import random
 from collections import deque
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Sequence, TypeVar
 
-import numpy as np
 from PIL import Image
 
 U, D, L, R = 8, 4, 2, 1  # up, down, left, right
@@ -94,6 +93,22 @@ for key, value in _LETTER_CODES_BASE.items():
 CHAR_CODES = {**DIGIT_CODES, **LETTER_CODES}
 CHAR_CODES[" "] = ("", "")
 
+T = TypeVar("T")
+
+
+def _scale_grid(grid: Sequence[Sequence[T]], factor: int) -> list[list[T]]:
+    """Repeat each row and column to scale the grid by ``factor``."""
+    if factor <= 1:
+        return [list(row) for row in grid]
+    scaled: list[list[T]] = []
+    for row in grid:
+        expanded_row: list[T] = []
+        for cell in row:
+            expanded_row.extend([cell] * factor)
+        for _ in range(factor):
+            scaled.append(list(expanded_row))
+    return scaled
+
 
 def build_rectangular_mask(width: int, height: int) -> list[str]:
     """Return a simple rectangular mask with entry/exit gaps on opposite walls."""
@@ -117,32 +132,27 @@ def build_rectangular_mask(width: int, height: int) -> list[str]:
     return rows
 
 
-def bitmasks_to_image(bm: Sequence[Sequence[int | None]], scale: int = 8) -> np.ndarray:
+def bitmasks_to_image(bm: Sequence[Sequence[int | None]], scale: int = 8) -> list[list[int]]:
     """Convert spanning-forest bitmasks to a binary wall/floor raster image."""
     H, W = len(bm), len(bm[0])
-    a = np.ones((2 * H + 1, 2 * W + 1), dtype=np.uint8)  # 1=wall, 0=floor
+    grid = [[1] * (2 * W + 1) for _ in range(2 * H + 1)]
 
     for r in range(H):
         for c in range(W):
             x = bm[r][c]
             if x is None:
                 continue
-            a[2 * r + 1, 2 * c + 1] = 0
+            grid[2 * r + 1][2 * c + 1] = 0
             if x & U:
-                a[2 * r, 2 * c + 1] = 0
+                grid[2 * r][2 * c + 1] = 0
             if x & D:
-                a[2 * r + 2, 2 * c + 1] = 0
+                grid[2 * r + 2][2 * c + 1] = 0
             if x & L:
-                a[2 * r + 1, 2 * c] = 0
+                grid[2 * r + 1][2 * c] = 0
             if x & R:
-                a[2 * r + 1, 2 * c + 2] = 0
+                grid[2 * r + 1][2 * c + 2] = 0
 
-    if scale == 1:
-        return a
-
-    # Nearest-neighbor upscale via Kronecker product.
-    img = np.kron(a, np.ones((scale, scale), dtype=np.uint8))
-    return img
+    return grid if scale == 1 else _scale_grid(grid, scale)
 
 
 def maze_forest_from_mask(mask: Sequence[str], seed: int = 0, open_char: str = "."):
@@ -278,7 +288,7 @@ def generate_mask_image(
     seed: int = 0,
     scale: int = 1,
     open_char: str = ".",
-) -> np.ndarray:
+ ) -> list[list[int]]:
     """Utility helper to reuse the demo maze generator elsewhere."""
     mask = mask or DEFAULT_MASK
     bm = maze_forest_from_mask(mask, seed=seed, open_char=open_char)
@@ -403,30 +413,41 @@ class RenderOptions:
 
 
 def _build_base_image(
-    img: np.ndarray,
+    grid: Sequence[Sequence[int]],
     wall_color: tuple[int, int, int],
     floor_color: tuple[int, int, int],
     *,
-    highlight_mask: np.ndarray | None = None,
+    highlight_mask: Sequence[Sequence[bool]] | None = None,
     highlight_color: tuple[int, int, int] | None = None,
-) -> np.ndarray:
-    """Expand grayscale maze array into RGB color image."""
-    wall = np.array(wall_color, dtype=np.uint8)
-    floor = np.array(floor_color, dtype=np.uint8)
-    mask = img[..., None]
-    # mask=1 => wall, mask=0 => floor
-    base = np.where(mask == 1, wall, floor)
+) -> Image.Image:
+    """Expand the maze grid into an RGB ``Image``."""
+    height = len(grid)
+    width = len(grid[0]) if height else 0
+    image = Image.new("RGB", (width, height))
+    pixels = image.load()
+
+    for y, row in enumerate(grid):
+        for x, value in enumerate(row):
+            pixels[x, y] = wall_color if value == 1 else floor_color
+
     if highlight_mask is not None and highlight_color is not None:
-        highlight = np.array(highlight_color, dtype=np.uint8)
-        base = np.where(highlight_mask[..., None], highlight, base)
-    return base
+        for y, row in enumerate(highlight_mask):
+            if y >= height:
+                break
+            for x, mark in enumerate(row):
+                if x >= width:
+                    break
+                if mark:
+                    pixels[x, y] = highlight_color
+
+    return image
 
 
 def _build_letter_wall_mask(
     mask: Sequence[str],
     used_rows: Sequence[tuple[int, int]],
     glyph_spans: Sequence[tuple[str, int, int, int, int]],
-) -> np.ndarray | None:
+) -> list[list[bool]] | None:
     rows_to_scan = {idx for pair in used_rows for idx in pair}
     if not rows_to_scan:
         return None
@@ -439,7 +460,9 @@ def _build_letter_wall_mask(
 
     height = len(mask)
     width = len(mask[0]) if mask else 0
-    highlight = np.zeros((2 * height + 1, 2 * width + 1), dtype=bool)
+    highlight_height = 2 * height + 1
+    highlight_width = 2 * width + 1
+    highlight = [[False] * highlight_width for _ in range(highlight_height)]
 
     for row_idx in rows_to_scan:
         if row_idx < 0 or row_idx >= height:
@@ -452,24 +475,34 @@ def _build_letter_wall_mask(
                 continue
             blocked = (~allow_mask) & 0xF
             if blocked & U:
-                highlight[2 * row_idx, 2 * col_idx : 2 * col_idx + 3] = True
+                target_row = 2 * row_idx
+                for c in range(2 * col_idx, min(2 * col_idx + 3, highlight_width)):
+                    highlight[target_row][c] = True
             if blocked & D:
-                highlight[2 * row_idx + 2, 2 * col_idx : 2 * col_idx + 3] = True
+                target_row = 2 * row_idx + 2
+                for c in range(2 * col_idx, min(2 * col_idx + 3, highlight_width)):
+                    highlight[target_row][c] = True
             if blocked & L:
-                highlight[2 * row_idx : 2 * row_idx + 3, 2 * col_idx] = True
+                target_col = 2 * col_idx
+                for r in range(2 * row_idx, min(2 * row_idx + 3, highlight_height)):
+                    highlight[r][target_col] = True
             if blocked & R:
-                highlight[2 * row_idx : 2 * row_idx + 3, 2 * col_idx + 2] = True
+                target_col = 2 * col_idx + 2
+                for r in range(2 * row_idx, min(2 * row_idx + 3, highlight_height)):
+                    highlight[r][target_col] = True
 
     for row_top, col_start, span_width in t_top_spans:
         r_idx = 2 * row_top
-        if r_idx >= highlight.shape[0]:
+        if r_idx >= highlight_height:
             continue
         for offset in range(span_width):
-            c = col_start + offset
-            c_idx = 2 * c
-            highlight[r_idx, c_idx : c_idx + 3] = False
+            c_idx = 2 * (col_start + offset)
+            for delta in range(3):
+                c = c_idx + delta
+                if c < highlight_width:
+                    highlight[r_idx][c] = False
 
-    if not highlight.any():
+    if not any(any(row) for row in highlight):
         return None
     return highlight
 
@@ -478,7 +511,7 @@ def render_message_maze(
     options: RenderOptions,
 ) -> tuple[
     Image.Image,
-    np.ndarray,
+    list[list[int]],
     list[str],
     list[tuple[int, int]],
     list[tuple[str, int, int, int, int]],
@@ -500,19 +533,15 @@ def render_message_maze(
     )
     highlight_mask = _build_letter_wall_mask(mask_with_message, used_rows, glyph_spans)
     if highlight_mask is not None and options.scale > 1:
-        highlight_mask = np.kron(
-            highlight_mask.astype(np.uint8),
-            np.ones((options.scale, options.scale), dtype=np.uint8),
-        ).astype(bool)
-    base_rgb = _build_base_image(
+        highlight_mask = _scale_grid(highlight_mask, options.scale)
+    base_img = _build_base_image(
         raw,
         options.wall_color,
         options.floor_color,
         highlight_mask=highlight_mask,
         highlight_color=options.message_wall_color,
     )
-    final_img = Image.fromarray(base_rgb, mode="RGB")
-    return final_img, raw, mask_with_message, used_rows, glyph_spans
+    return base_img, raw, mask_with_message, used_rows, glyph_spans
 
 
 def render_to_base64(options: RenderOptions) -> str:
