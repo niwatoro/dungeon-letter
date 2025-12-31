@@ -13,6 +13,7 @@ from dungeon_drawer import (
     DEFAULT_FLOOR_COLOR,
     DEFAULT_MASK_HEIGHT,
     DEFAULT_MASK_WIDTH,
+    DEFAULT_MESSAGE_WALL_COLOR,
     DEFAULT_WALL_COLOR,
     MAX_MASK_HEIGHT,
     MAX_MASK_WIDTH,
@@ -98,6 +99,11 @@ def _build_options(form: dict) -> RenderOptions:
     wall_color = _parse_color(
         form.get("wall_color"), DEFAULT_WALL_COLOR, label="Wall color"
     )
+    message_wall_color = _parse_color(
+        form.get("message_wall_color"),
+        DEFAULT_MESSAGE_WALL_COLOR,
+        label="Message wall color",
+    )
     floor_color = _parse_color(
         form.get("floor_color"), DEFAULT_FLOOR_COLOR, label="Floor color"
     )
@@ -107,6 +113,7 @@ def _build_options(form: dict) -> RenderOptions:
         mask_width=mask_width,
         mask_height=mask_height,
         wall_color=wall_color,
+        message_wall_color=message_wall_color,
         floor_color=floor_color,
         scale=scale,
         dpi=dpi,
@@ -133,7 +140,7 @@ def index():
     if request.method == "POST":
         try:
             options = _build_options(request.form)
-            img, raw, mask, used_rows = render_message_maze(options)
+            img, raw, mask, used_rows, _glyph_spans = render_message_maze(options)
             image_data = f"data:image/png;base64,{_encode_png(img, options.dpi)}"
             stats = _stats(raw)
             mask_lines = [
@@ -158,6 +165,7 @@ def index():
         mask_min_height=MIN_MASK_HEIGHT,
         mask_max_height=MAX_MASK_HEIGHT,
         wall_color_hex=_rgb_to_hex(options.wall_color),
+        message_wall_color_hex=_rgb_to_hex(options.message_wall_color),
         floor_color_hex=_rgb_to_hex(options.floor_color),
     )
 

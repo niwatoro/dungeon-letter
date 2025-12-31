@@ -325,7 +325,11 @@ def _lookup_tokens(ch: str) -> tuple[str, str]:
 
 
 def _write_line_to_rows(
-    rows: list[list[str]], row_top: int, row_bottom: int, line: str
+    rows: list[list[str]],
+    row_top: int,
+    row_bottom: int,
+    line: str,
+    glyph_spans: list[tuple[str, int, int, int, int]],
 ) -> None:
     cleaned = list(line)
     if not cleaned:
@@ -362,27 +366,30 @@ def _write_line_to_rows(
             rows[row_bottom][col_idx] = bottom_seq[offset]
 
         prev_width = glyph_width
+        glyph_spans.append((ch, row_top, row_bottom, col, glyph_width))
 
 
 def _apply_message_to_mask(
     mask: Sequence[str], message: str
-) -> tuple[list[str], list[tuple[int, int]]]:
+) -> tuple[list[str], list[tuple[int, int]], list[tuple[str, int, int, int, int]]]:
     rows = [list(row) for row in mask]
     lines = _split_message_lines(message)
     used_rows: list[tuple[int, int]] = []
+    glyph_spans: list[tuple[str, int, int, int, int]] = []
 
     for line_idx, line in enumerate(lines):
         row_top = MESSAGE_START_ROW + line_idx * (2 + MESSAGE_LINE_GAP)
         row_bottom = row_top + 1
         if row_bottom >= len(rows) - 1:
             raise ValueError("Message is too tall for the current mask.")
-        _write_line_to_rows(rows, row_top, row_bottom, line)
+        _write_line_to_rows(rows, row_top, row_bottom, line, glyph_spans)
         used_rows.append((row_top, row_bottom))
 
-    return ["".join(row) for row in rows], used_rows
+    return ["".join(row) for row in rows], used_rows, glyph_spans
 
 
 DEFAULT_WALL_COLOR = (12, 15, 18)
+DEFAULT_MESSAGE_WALL_COLOR = DEFAULT_WALL_COLOR
 DEFAULT_FLOOR_COLOR = (235, 232, 224)
 
 
@@ -393,6 +400,7 @@ class RenderOptions:
     mask_width: int = DEFAULT_MASK_WIDTH
     mask_height: int = DEFAULT_MASK_HEIGHT
     wall_color: tuple[int, int, int] = DEFAULT_WALL_COLOR
+    message_wall_color: tuple[int, int, int] = DEFAULT_MESSAGE_WALL_COLOR
     floor_color: tuple[int, int, int] = DEFAULT_FLOOR_COLOR
     scale: int = 12
     dpi: int = 500
@@ -402,32 +410,107 @@ def _build_base_image(
     img: np.ndarray,
     wall_color: tuple[int, int, int],
     floor_color: tuple[int, int, int],
+    *,
+    highlight_mask: np.ndarray | None = None,
+    highlight_color: tuple[int, int, int] | None = None,
 ) -> np.ndarray:
     """Expand grayscale maze array into RGB color image."""
     wall = np.array(wall_color, dtype=np.uint8)
     floor = np.array(floor_color, dtype=np.uint8)
     mask = img[..., None]
     # mask=1 => wall, mask=0 => floor
-    return np.where(mask == 1, wall, floor)
+    base = np.where(mask == 1, wall, floor)
+    if highlight_mask is not None and highlight_color is not None:
+        highlight = np.array(highlight_color, dtype=np.uint8)
+        base = np.where(highlight_mask[..., None], highlight, base)
+    return base
+
+
+def _build_letter_wall_mask(
+    mask: Sequence[str],
+    used_rows: Sequence[tuple[int, int]],
+    glyph_spans: Sequence[tuple[str, int, int, int, int]],
+) -> np.ndarray | None:
+    rows_to_scan = {idx for pair in used_rows for idx in pair}
+    if not rows_to_scan:
+        return None
+
+    t_top_spans = [
+        (row_top, col_start, width)
+        for ch, row_top, _row_bottom, col_start, width in glyph_spans
+        if ch in ("t", "T")
+    ]
+
+    height = len(mask)
+    width = len(mask[0]) if mask else 0
+    highlight = np.zeros((2 * height + 1, 2 * width + 1), dtype=bool)
+
+    for row_idx in rows_to_scan:
+        if row_idx < 0 or row_idx >= height:
+            continue
+        row = mask[row_idx]
+        for col_idx, ch in enumerate(row):
+            try:
+                allow_mask = int(ch, 16)
+            except ValueError:
+                continue
+            blocked = (~allow_mask) & 0xF
+            if blocked & U:
+                highlight[2 * row_idx, 2 * col_idx : 2 * col_idx + 3] = True
+            if blocked & D:
+                highlight[2 * row_idx + 2, 2 * col_idx : 2 * col_idx + 3] = True
+            if blocked & L:
+                highlight[2 * row_idx : 2 * row_idx + 3, 2 * col_idx] = True
+            if blocked & R:
+                highlight[2 * row_idx : 2 * row_idx + 3, 2 * col_idx + 2] = True
+
+    for row_top, col_start, span_width in t_top_spans:
+        r_idx = 2 * row_top
+        if r_idx >= highlight.shape[0]:
+            continue
+        for offset in range(span_width):
+            c = col_start + offset
+            c_idx = 2 * c
+            highlight[r_idx, c_idx : c_idx + 3] = False
+
+    if not highlight.any():
+        return None
+    return highlight
 
 
 def render_message_maze(
     options: RenderOptions,
-) -> tuple[Image.Image, np.ndarray, list[str], list[tuple[int, int]]]:
+) -> tuple[
+    Image.Image, np.ndarray, list[str], list[tuple[int, int]], list[tuple[str, int, int, int, int]]
+]:
     """Generate a dungeon image whose topology hides the provided message."""
     base_mask = build_rectangular_mask(options.mask_width, options.mask_height)
-    mask_with_message, used_rows = _apply_message_to_mask(base_mask, options.message)
+    mask_with_message, used_rows, glyph_spans = _apply_message_to_mask(
+        base_mask, options.message
+    )
     raw = generate_mask_image(
         mask=mask_with_message, seed=options.seed, scale=options.scale
     )
-    base_rgb = _build_base_image(raw, options.wall_color, options.floor_color)
+    highlight_mask = _build_letter_wall_mask(mask_with_message, used_rows, glyph_spans)
+    if highlight_mask is not None and options.scale > 1:
+        highlight_mask = np.kron(
+            highlight_mask.astype(np.uint8),
+            np.ones((options.scale, options.scale), dtype=np.uint8),
+        ).astype(bool)
+    base_rgb = _build_base_image(
+        raw,
+        options.wall_color,
+        options.floor_color,
+        highlight_mask=highlight_mask,
+        highlight_color=options.message_wall_color,
+    )
     final_img = Image.fromarray(base_rgb, mode="RGB")
-    return final_img, raw, mask_with_message, used_rows
+    return final_img, raw, mask_with_message, used_rows, glyph_spans
 
 
 def render_to_base64(options: RenderOptions) -> str:
     """Return the hidden-message dungeon PNG encoded as a data URI fragment."""
-    img, _, _, _ = render_message_maze(options)
+    img, _, _, _, _ = render_message_maze(options)
     buf = io.BytesIO()
     img.save(buf, format="PNG", dpi=(options.dpi, options.dpi))
     data = base64.b64encode(buf.getvalue()).decode("ascii")
