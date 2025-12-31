@@ -1,4 +1,4 @@
-## Dungeon Drawer (Flask)
+## Dungeon Drawer (FastAPI)
 
 Render Wilson mazes that hide a short message as a hex bitmask, then export a chunky PNG preview.
 
@@ -11,7 +11,7 @@ uv sync
 ### Run (development)
 
 ```bash
-uv run flask --app main run --debug
+uv run uvicorn main:app --reload --host 0.0.0.0 --port 5000
 ```
 
 Visit http://127.0.0.1:5000/ and fill the form:
