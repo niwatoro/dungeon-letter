@@ -375,9 +375,7 @@ def _apply_message_to_mask(
         row_bottom = row_top + 1
         if row_bottom >= len(rows) - 1:
             raise ValueError("Message is too tall for the current mask.")
-        _write_line_to_rows(
-            rows, row_top, row_bottom, line, glyph_spans, start_col
-        )
+        _write_line_to_rows(rows, row_top, row_bottom, line, glyph_spans, start_col)
         used_rows.append((row_top, row_bottom))
 
     return ["".join(row) for row in rows], used_rows, glyph_spans

@@ -1,13 +1,13 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Dungeon With Message</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
   </head>
   <body>
     <div class="bg-layer bg-grid" aria-hidden="true"></div>
@@ -24,81 +24,62 @@
               Message
               <textarea name="message" rows="3" placeholder="A-Z 0-9 space">{{ options.message }}</textarea>
             </label>
-            <p class="hint">
-              Allowed: A-Z, 0-9, spaces.
-            </p>
+            <p class="hint">Allowed: A-Z, 0-9, spaces.</p>
             <label>
               Mask layout
-              <textarea
-                name="mask"
-                rows="14"
-                placeholder="# is wall, '.' is open, digits 0-F restrict directions">{{ mask_text }}</textarea>
+              <textarea name="mask" rows="14" placeholder="# is wall, '.' is open, digits 0-F restrict directions">{{ mask_text }}</textarea>
             </label>
-            <p class="hint">
-              Use '#' for wall, '.' for open space, and hex digits (8: up, 4: right, 2: down, 1: left) for open directions.
-            </p>
+            <p class="hint">Use '#' for wall, '.' for open space, and hex digits (8: up, 4: right, 2: down, 1: left) for open directions.</p>
             <div class="input-row">
               <label>
                 Seed
-                <input type="number" name="seed" placeholder="random" value="{{ options.seed }}">
+                <input type="number" name="seed" placeholder="random" value="{{ options.seed }}" />
               </label>
               <label>
                 Scale 1-40
-                <input type="number" name="scale" min="1" max="40" value="{{ options.scale }}">
+                <input type="number" name="scale" min="1" max="40" value="{{ options.scale }}" />
               </label>
               <label>
                 DPI
-                <input type="number" name="dpi" min="72" max="1200" value="{{ options.dpi }}">
+                <input type="number" name="dpi" min="72" max="1200" value="{{ options.dpi }}" />
               </label>
             </div>
             <div class="input-row">
               <label>
                 Width
-                <input type="number" name="mask_width" min="{{ mask_min_width }}" max="{{ mask_max_width }}" value="{{ options.mask_width }}">
+                <input type="number" name="mask_width" min="{{ mask_min_width }}" max="{{ mask_max_width }}" value="{{ options.mask_width }}" />
                 <span class="hint-inline">{{ mask_min_width }}-{{ mask_max_width }}</span>
               </label>
               <label>
                 Height
-                <input type="number" name="mask_height" min="{{ mask_min_height }}" max="{{ mask_max_height }}" value="{{ options.mask_height }}">
+                <input type="number" name="mask_height" min="{{ mask_min_height }}" max="{{ mask_max_height }}" value="{{ options.mask_height }}" />
                 <span class="hint-inline">{{ mask_min_height }}-{{ mask_max_height }}</span>
               </label>
             </div>
             <div class="input-row">
               <label>
                 Msg row
-                <input
-                  type="number"
-                  name="message_start_row"
-                  min="0"
-                  max="{{ message_row_max }}"
-                  value="{{ options.message_start_row }}"
-                >
+                <input type="number" name="message_start_row" min="0" max="{{ message_row_max }}" value="{{ options.message_start_row }}" />
                 <span class="hint-inline">0-indexed top-left row</span>
               </label>
               <label>
                 Msg col
-                <input
-                  type="number"
-                  name="message_start_col"
-                  min="{{ message_col_min }}"
-                  max="{{ message_col_max }}"
-                  value="{{ options.message_start_col }}"
-                >
+                <input type="number" name="message_start_col" min="{{ message_col_min }}" max="{{ message_col_max }}" value="{{ options.message_start_col }}" />
                 <span class="hint-inline">0-indexed column (min {{ message_col_min }})</span>
               </label>
             </div>
             <div class="color-row">
               <label class="color-input">
                 Wall
-                <input type="color" name="wall_color" value="{{ wall_color_hex }}">
+                <input type="color" name="wall_color" value="{{ wall_color_hex }}" />
               </label>
               <label class="color-input">
                 Glyph
-                <input type="color" name="message_wall_color" value="{{ message_wall_color_hex }}">
+                <input type="color" name="message_wall_color" value="{{ message_wall_color_hex }}" />
               </label>
               <label class="color-input">
                 Floor
-                <input type="color" name="floor_color" value="{{ floor_color_hex }}">
+                <input type="color" name="floor_color" value="{{ floor_color_hex }}" />
               </label>
             </div>
             <div class="form-actions">
@@ -106,25 +87,18 @@
                 <span>Render</span>
                 <span class="button-glyph" aria-hidden="true">▶︎</span>
               </button>
-              <button
-                type="button"
-                class="pixel-button reset-button"
-                onclick="window.location.href='{{ url_for('index') }}';"
-              >
-                RESET
-              </button>
+              <button type="button" class="pixel-button reset-button" onclick="window.location.href='{{ url_for('index') }}';">RESET</button>
             </div>
           </form>
           {% if error %}
-            <p class="error">{{ error }}</p>
-          {% endif %}
-          {% if mask_preview %}
-            <div class="mask-preview">
-              <p class="mask-title">Mask rows</p>
-              {% for row in mask_preview %}
-                <pre>row {{ row.index + 1 }}: {{ row.text }}</pre>
-              {% endfor %}
-            </div>
+          <p class="error">{{ error }}</p>
+          {% endif %} {% if mask_preview %}
+          <div class="mask-preview">
+            <p class="mask-title">Mask rows</p>
+            {% for row in mask_preview %}
+            <pre>row {{ row.index + 1 }}: {{ row.text }}</pre>
+            {% endfor %}
+          </div>
           {% endif %}
         </section>
 
@@ -133,27 +107,27 @@
             <h2>Preview</h2>
           </div>
           {% if image_data %}
-            <div class="preview-frame">
-              <img src="{{ image_data }}" alt="Generated dungeon">
-            </div>
-            <ul class="stats">
-              <li>
-                <span class="stat-label">Width</span>
-                <span class="stat-value">{{ stats.width }} px</span>
-              </li>
-              <li>
-                <span class="stat-label">Height</span>
-                <span class="stat-value">{{ stats.height }} px</span>
-              </li>
-              <li>
-                <span class="stat-label">Floor %</span>
-                <span class="stat-value">{{ stats.floor_pct }}%</span>
-              </li>
-            </ul>
+          <div class="preview-frame">
+            <img src="{{ image_data }}" alt="Generated dungeon" />
+          </div>
+          <ul class="stats">
+            <li>
+              <span class="stat-label">Width</span>
+              <span class="stat-value">{{ stats.width }} px</span>
+            </li>
+            <li>
+              <span class="stat-label">Height</span>
+              <span class="stat-value">{{ stats.height }} px</span>
+            </li>
+            <li>
+              <span class="stat-label">Floor %</span>
+              <span class="stat-value">{{ stats.floor_pct }}%</span>
+            </li>
+          </ul>
           {% else %}
-            <div class="preview-placeholder">
-              <p>Render to preview.</p>
-            </div>
+          <div class="preview-placeholder">
+            <p>Render to preview.</p>
+          </div>
           {% endif %}
         </section>
       </main>
