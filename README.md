@@ -25,3 +25,7 @@ Visit <http://127.0.0.1:8000/> and fill the form:
 - Preview shows the encoded mask rows and basic width/height/floor coverage stats.
 
 Save the PNG directly from the preview image.
+
+## References
+
+- Maze generation: <https://zenn.dev/folio_sec/articles/06c4271b96bfb5>
