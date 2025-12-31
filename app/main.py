@@ -203,7 +203,9 @@ async def index() -> str:
         try:
             options, mask_layout = _build_options(request.form)
             image_pixels, raw, mask, used_rows, _ = render_message_maze(options)
-            image_data = f"data:image/png;base64,{encode_png(image_pixels, options.dpi)}"
+            image_data = (
+                f"data:image/png;base64,{encode_png(image_pixels, options.dpi)}"
+            )
             stats = _stats(raw)
             mask_lines = [
                 {"index": row_idx, "text": mask[row_idx]}

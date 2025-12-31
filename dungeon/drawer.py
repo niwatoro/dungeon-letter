@@ -131,7 +131,9 @@ def build_rectangular_mask(width: int, height: int) -> list[str]:
     return rows
 
 
-def bitmasks_to_image(bm: Sequence[Sequence[int | None]], scale: int = 8) -> list[list[int]]:
+def bitmasks_to_image(
+    bm: Sequence[Sequence[int | None]], scale: int = 8
+) -> list[list[int]]:
     """Convert spanning-forest bitmasks to a binary wall/floor raster image."""
     H, W = len(bm), len(bm[0])
     grid = [[1] * (2 * W + 1) for _ in range(2 * H + 1)]
@@ -287,7 +289,7 @@ def generate_mask_image(
     seed: int = 0,
     scale: int = 1,
     open_char: str = ".",
- ) -> list[list[int]]:
+) -> list[list[int]]:
     """Utility helper to reuse the demo maze generator elsewhere."""
     mask = mask or DEFAULT_MASK
     bm = maze_forest_from_mask(mask, seed=seed, open_char=open_char)
@@ -426,8 +428,7 @@ def _build_pixel_grid(
     height = len(grid)
     width = len(grid[0]) if height else 0
     pixels: list[list[tuple[int, int, int]]] = [
-        [wall_color if value == 1 else floor_color for value in row]
-        for row in grid
+        [wall_color if value == 1 else floor_color for value in row] for row in grid
     ]
 
     if highlight_mask is not None and highlight_color is not None:
@@ -557,9 +558,7 @@ def _png_chunk(chunk_type: bytes, data: bytes) -> bytes:
     return length + chunk + crc
 
 
-def encode_png(
-    pixels: Sequence[Sequence[tuple[int, int, int]]], dpi: int = 72
-) -> str:
+def encode_png(pixels: Sequence[Sequence[tuple[int, int, int]]], dpi: int = 72) -> str:
     """Encode an RGB pixel grid into a base64 PNG representation."""
     height = len(pixels)
     if height == 0:
