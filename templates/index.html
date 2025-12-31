@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <title>Hidden Message Dungeon</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <main>
+      <section class="panel form-panel">
+        <h1>メッセージを潜ませたダンジョン</h1>
+        <form method="post">
+          <label>
+            隠したいメッセージ
+            <textarea name="message" rows="3" placeholder="A-Z / 0-9 / space">{{ options.message }}</textarea>
+          </label>
+          <p class="hint">
+            利用できるのは英数字（A-Z, 0-9）と空白（全角スペースも可）です。空白を入力すると 2 列分の余白ギャップが挿入されます。開始位置は上から4行目・左から4列目で右方向に描画され、1文字ごとに1列の空きを挟みます。
+            改行すると上下2行のペアを1行空けて次の段に配置します。現在のマスク横幅では右方向におよそ {{ message_width }} 列分の余裕があります（マスク幅を広げると列数も増えます）。
+          </p>
+          <label>
+            迷路シード（空欄でランダム）
+            <input type="number" name="seed" placeholder="例: 2025" value="{{ options.seed }}">
+          </label>
+          <label>
+            ピクセル倍率（1〜40）
+            <input type="number" name="scale" min="1" max="40" value="{{ options.scale }}">
+          </label>
+          <label>
+            出力 DPI
+            <input type="number" name="dpi" min="72" max="1200" value="{{ options.dpi }}">
+          </label>
+          <label>
+            マスクの幅（列数）
+            <input type="number" name="mask_width" min="{{ mask_min_width }}" max="{{ mask_max_width }}" value="{{ options.mask_width }}">
+            <span class="hint-inline">範囲: {{ mask_min_width }} 〜 {{ mask_max_width }} 列</span>
+          </label>
+          <label>
+            マスクの高さ（行数）
+            <input type="number" name="mask_height" min="{{ mask_min_height }}" max="{{ mask_max_height }}" value="{{ options.mask_height }}">
+            <span class="hint-inline">範囲: {{ mask_min_height }} 〜 {{ mask_max_height }} 行</span>
+          </label>
+          <label class="color-input">
+            壁の色
+            <input type="color" name="wall_color" value="{{ wall_color_hex }}">
+          </label>
+          <label class="color-input">
+            床の色
+            <input type="color" name="floor_color" value="{{ floor_color_hex }}">
+          </label>
+          <button type="submit">生成する</button>
+        </form>
+        {% if error %}
+          <p class="error">{{ error }}</p>
+        {% endif %}
+        {% if mask_preview %}
+          <div class="mask-preview">
+            <p>埋め込まれたマスク:</p>
+            {% for row in mask_preview %}
+              <pre>row {{ row.index + 1 }}: {{ row.text }}</pre>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="panel preview-panel">
+        <h2>プレビュー</h2>
+        {% if image_data %}
+          <img src="{{ image_data }}" alt="生成されたダンジョン">
+          <ul class="stats">
+            <li>幅: {{ stats.width }} px</li>
+            <li>高さ: {{ stats.height }} px</li>
+            <li>床率: {{ stats.floor_pct }}%</li>
+          </ul>
+        {% else %}
+          <p>フォームにメッセージを入力して「生成する」を押すと結果が表示されます。</p>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>
