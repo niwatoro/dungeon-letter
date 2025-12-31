@@ -124,6 +124,43 @@ body {
   gap: 0.8rem;
 }
 
+.mask-simple,
+.mask-detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.mask-detail-panel {
+  display: none;
+}
+
+.mask-size-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mask-label {
+  margin: 0;
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  color: var(--text-light);
+}
+
+.mask-size-row label {
+  font-size: 0.7rem;
+}
+
+.mask-layout-toggle {
+  padding: 0.55rem 1rem;
+  font-size: 0.55rem;
+  letter-spacing: 0.3em;
+  align-self: flex-start;
+  min-width: 140px;
+}
+
 label {
   display: flex;
   flex-direction: column;
@@ -201,6 +238,13 @@ textarea {
 .pixel-button:focus-visible {
   outline: 3px dashed var(--text-light);
   outline-offset: 4px;
+}
+
+.toggle-button {
+  font-family: inherit;
+  background: #000;
+  border: 2px solid var(--text-light);
+  color: var(--text-light);
 }
 
 .form-actions {

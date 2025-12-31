@@ -100,7 +100,7 @@ def _parse_mask_override(value: str | None) -> list[str] | None:
     return lines
 
 
-def _build_options(form: dict) -> RenderOptions:
+def _build_options(form: dict) -> tuple[RenderOptions, str]:
     message_value = form.get("message")
     message = DEFAULT_MESSAGE if message_value is None else message_value
     seed = _parse_seed(form.get("seed"))
@@ -129,7 +129,12 @@ def _build_options(form: dict) -> RenderOptions:
     floor_color = _parse_color(
         form.get("floor_color"), DEFAULT_FLOOR_COLOR, label="Floor color"
     )
-    mask_override = _parse_mask_override(form.get("mask"))
+    layout = form.get("mask_layout") or "simple"
+    if layout not in ("simple", "detail"):
+        layout = "simple"
+    mask_override = (
+        _parse_mask_override(form.get("mask")) if layout == "detail" else None
+    )
     effective_mask_height = len(mask_override) if mask_override else mask_height
     effective_mask_width = (
         max(len(line) for line in mask_override) if mask_override else mask_width
@@ -146,19 +151,22 @@ def _build_options(form: dict) -> RenderOptions:
         minimum=MESSAGE_MIN_COL,
         maximum=max(MESSAGE_MIN_COL, effective_mask_width - 3),
     )
-    return RenderOptions(
-        message=message,
-        seed=seed,
-        mask_width=mask_width,
-        mask_height=mask_height,
-        mask_override=mask_override,
-        wall_color=wall_color,
-        message_wall_color=message_wall_color,
-        floor_color=floor_color,
-        scale=scale,
-        dpi=dpi,
-        message_start_row=message_start_row,
-        message_start_col=message_start_col,
+    return (
+        RenderOptions(
+            message=message,
+            seed=seed,
+            mask_width=mask_width,
+            mask_height=mask_height,
+            mask_override=mask_override,
+            wall_color=wall_color,
+            message_wall_color=message_wall_color,
+            floor_color=floor_color,
+            scale=scale,
+            dpi=dpi,
+            message_start_row=message_start_row,
+            message_start_col=message_start_col,
+        ),
+        layout,
     )
 
 
@@ -187,10 +195,13 @@ async def index() -> str:
     mask_input_value = "\n".join(DEFAULT_MASK)
     mask_actual_width = options.mask_width
     mask_actual_height = options.mask_height
+    mask_layout = "simple"
 
     if request.method == "POST":
+        mask_layout = request.form.get("mask_layout") or "simple"
+        mask_input_value = request.form.get("mask") or mask_input_value
         try:
-            options = _build_options(request.form)
+            options, mask_layout = _build_options(request.form)
             image_pixels, raw, mask, used_rows, _ = render_message_maze(options)
             image_data = f"data:image/png;base64,{encode_png(image_pixels, options.dpi)}"
             stats = _stats(raw)
@@ -219,6 +230,7 @@ async def index() -> str:
         "mask_min_height": MIN_MASK_HEIGHT,
         "mask_max_height": MAX_MASK_HEIGHT,
         "mask_text": mask_input_value,
+        "mask_layout": mask_layout,
         "mask_actual_width": mask_actual_width,
         "mask_actual_height": mask_actual_height,
         "wall_color_hex": _rgb_to_hex(options.wall_color),

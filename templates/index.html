@@ -25,11 +25,32 @@
               <textarea name="message" rows="3" placeholder="A-Z 0-9 space">{{ options.message }}</textarea>
             </label>
             <p class="hint">Allowed: A-Z, 0-9, spaces.</p>
-            <label>
-              Mask layout
+            <button
+                type="button"
+                class="mask-layout-toggle toggle-button"
+                data-mask-layout-toggle
+              >
+                CUSTOM MASK
+            </button>
+            <input type="hidden" name="mask_layout" value="{{ mask_layout }}" data-mask-layout-mode />
+            <div class="mask-simple" data-mask-simple>
+              <div class="input-row mask-size-row">
+                <label>
+                  Width
+                  <input type="number" name="mask_width" min="{{ mask_min_width }}" max="{{ mask_max_width }}" value="{{ options.mask_width }}" />
+                  <span class="hint-inline">{{ mask_min_width }}-{{ mask_max_width }}</span>
+                </label>
+                <label>
+                  Height
+                  <input type="number" name="mask_height" min="{{ mask_min_height }}" max="{{ mask_max_height }}" value="{{ options.mask_height }}" />
+                  <span class="hint-inline">{{ mask_min_height }}-{{ mask_max_height }}</span>
+                </label>
+              </div>
+            </div>
+            <div class="mask-detail-panel" data-mask-detail hidden aria-hidden="true">
               <textarea name="mask" rows="14" placeholder="# is wall, '.' is open, digits 0-F restrict directions">{{ mask_text }}</textarea>
-            </label>
-            <p class="hint">Use '#' for wall, '.' for open space, and hex digits (8: up, 4: right, 2: down, 1: left) for open directions.</p>
+              <p class="hint">Use '#' for wall, '.' for open space, and hex digits (8: up, 4: right, 2: down, 1: left) for open directions.</p>
+            </div>
             <div class="input-row">
               <label>
                 Seed
@@ -119,5 +140,36 @@
         </section>
       </main>
     </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const maskSimple = document.querySelector("[data-mask-simple]");
+        const maskDetail = document.querySelector("[data-mask-detail]");
+        const layoutToggle = document.querySelector("[data-mask-layout-toggle]");
+        const layoutModeInput = document.querySelector("[data-mask-layout-mode]");
+        if (!maskSimple || !maskDetail || !layoutToggle || !layoutModeInput) {
+          return;
+        }
+
+        const updateToggle = (showDetail) => {
+          maskSimple.hidden = showDetail;
+          maskDetail.hidden = !showDetail;
+          maskSimple.setAttribute("aria-hidden", showDetail.toString());
+          maskDetail.setAttribute("aria-hidden", (!showDetail).toString());
+          maskSimple.style.display = showDetail ? "none" : "flex";
+          maskDetail.style.display = showDetail ? "flex" : "none";
+          layoutToggle.textContent = showDetail ? "SIMPLE MASK" : "CUSTOM MASK";
+          layoutModeInput.value = showDetail ? "detail" : "simple";
+        };
+
+        const toggleDetail = () => {
+          const showDetail = layoutModeInput.value === "detail";
+          updateToggle(!showDetail);
+        };
+
+        const defaultShowDetail = layoutModeInput.value === "detail";
+        updateToggle(defaultShowDetail);
+        layoutToggle.addEventListener("click", toggleDetail);
+      });
+    </script>
   </body>
 </html>

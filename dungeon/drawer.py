@@ -592,29 +592,3 @@ def encode_png(
     header.extend(_png_chunk(b"IEND", b""))
 
     return base64.b64encode(bytes(header)).decode("ascii")
-
-
-def _demo(seed: int = 0):
-    opts = RenderOptions(seed=seed)
-    pixels, _, _, _, _ = render_message_maze(opts)
-    print(encode_png(pixels, opts.dpi))
-
-
-__all__ = [
-    "DEFAULT_MASK",
-    "MESSAGE_START_ROW",
-    "MESSAGE_LINE_GAP",
-    "MESSAGE_START_COL",
-    "MESSAGE_MAX_COLUMNS",
-    "RenderOptions",
-    "bitmasks_to_image",
-    "generate_mask_image",
-    "maze_forest_from_mask",
-    "render_message_maze",
-    "encode_png",
-    "render_to_base64",
-]
-
-
-if __name__ == "__main__":
-    _demo()
